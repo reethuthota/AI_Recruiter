@@ -5,6 +5,8 @@ from langchain.schema.document import Document
 from PyPDF2 import PdfReader
 import pandas as pd
 
+from langchain.prompts.example_selector import SemanticSimilarityExampleSelector
+
 from secret_key import openapi_key
 os.environ['OPENAI_API_KEY'] = openapi_key
 
@@ -49,6 +51,8 @@ def extract_resume_info(resume_path):
     print(df)
     
     skills = extracted_info.get('Skills', '')
+    print(skills)
+    return skills
     
     # name = extracted_info.get('Name', '')
     # email = extracted_info.get('Email', '')
@@ -68,5 +72,29 @@ def extract_resume_info(resume_path):
     # print("Designation:", designation)
 
 
-resume_path = '/Users/reethu/Documents/Job Docs/Resume final.pdf'
-extract_resume_info(resume_path)
+def skills_matching(resume_skills, skills_df):
+    # Extract primary and secondary skills from skills_df
+    primary_skills = set(skills_df['Primary'].str.split(',').explode().str.strip())
+    secondary_skills = set(skills_df['Secondary'].str.split(',').explode().str.strip())
+
+    # Split resume skills into a set
+    resume_skills_set = set(resume_skills.split(','))
+    print("\n", primary_skills)
+    print("\n", secondary_skills)
+    print("\n", resume_skills_set)
+
+    # Calculate the percentage match for primary skills
+    primary_match = len(resume_skills_set.intersection(primary_skills)) / len(primary_skills) * 100
+
+    # Calculate the percentage match for secondary skills
+    secondary_match = len(resume_skills_set.intersection(secondary_skills)) / len(secondary_skills) * 100
+
+    print("Percentage match of primary skills with resume:", round(primary_match, 2), "%")
+    print("Percentage match of secondary skills with resume:", round(secondary_match, 2), "%")
+
+
+resume_path = '/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/sample/Dhaval_Thakkar_Resume.pdf'
+resume_skills = extract_resume_info(resume_path)
+
+skills_df = pd.read_csv('/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/skills.csv')
+skills_matching(resume_skills, skills_df)
