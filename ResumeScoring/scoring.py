@@ -5,8 +5,6 @@ from langchain.schema.document import Document
 from PyPDF2 import PdfReader
 import pandas as pd
 
-from langchain.prompts.example_selector import SemanticSimilarityExampleSelector
-
 from secret_key import openapi_key
 os.environ['OPENAI_API_KEY'] = openapi_key
 
@@ -53,47 +51,38 @@ def extract_resume_info(resume_path):
     skills = extracted_info.get('Skills', '')
     print(skills)
     return skills
-    
-    # name = extracted_info.get('Name', '')
-    # email = extracted_info.get('Email', '')
-    # contact_info = extracted_info.get('Contact Info', '')
-    # education = extracted_info.get('Education', '')
-    # skills = extracted_info.get('Skills', '')
-    # experience = extracted_info.get('Experience', '')
-    # designation = extracted_info.get('Designation', '')
-    
-    # # Print the extracted information
-    # print("Name:", name)
-    # print("Email:", email)
-    # print("Contact Info:", contact_info)
-    # print("Education:", education)
-    # print("Skills:", skills)
-    # print("Experience:", experience)
-    # print("Designation:", designation)
 
 
 def skills_matching(resume_skills, skills_df):
-    # Extract primary and secondary skills from skills_df
+    llm = OpenAI()
+    chain = load_qa_chain(llm, chain_type="stuff",verbose=True)
+    
     primary_skills = set(skills_df['Primary'].str.split(',').explode().str.strip())
     secondary_skills = set(skills_df['Secondary'].str.split(',').explode().str.strip())
+    resume_skills_list = resume_skills.split(',')
 
-    # Split resume skills into a set
-    resume_skills_set = set(resume_skills.split(','))
-    print("\n", primary_skills)
-    print("\n", secondary_skills)
-    print("\n", resume_skills_set)
+    primary_similarity_scores = []
+    secondary_similarity_scores = []
+    
+    # Calculate similarity scores for primary skills
+    prompt1 = f"Find the intersection between set 1 : {', '.join(resume_skills_list)} and set 2 : {primary_skills}. Give me a percentage as (intersection/number of items in set 2)*100. Print only the final percentage"
+    docs_primary_skills = []
+    for skill in primary_skills:
+        docs_primary_skills.append(Document(page_content=skill))
+    primary_similarity_scores = chain.run(input_documents=docs_primary_skills, question=prompt1, model='gpt-3.5-turbo')
+    print("Primary Skills Match :" , primary_similarity_scores)
+    
 
-    # Calculate the percentage match for primary skills
-    primary_match = len(resume_skills_set.intersection(primary_skills)) / len(primary_skills) * 100
+    # Calculate similarity scores for secondary skills
+    prompt = f"Find the intersection between set 1 : {', '.join(resume_skills_list)} and set 2 : {secondary_skills}. Give me a percentage as (intersection/number of items in set 2)*100. Print only the final percentage"
+    docs_secondary_skills = []
+    for skill in secondary_skills:
+        docs_secondary_skills.append(Document(page_content=skill))
+    secondary_similarity_scores = chain.run(input_documents=docs_secondary_skills, question=prompt, model='gpt-3.5-turbo')
+    print("Secondary Skills Match :" , secondary_similarity_scores)
 
-    # Calculate the percentage match for secondary skills
-    secondary_match = len(resume_skills_set.intersection(secondary_skills)) / len(secondary_skills) * 100
 
-    print("Percentage match of primary skills with resume:", round(primary_match, 2), "%")
-    print("Percentage match of secondary skills with resume:", round(secondary_match, 2), "%")
-
-
-resume_path = '/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/sample/Dhaval_Thakkar_Resume.pdf'
+resume_path = '/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/sample/Reethu_Resume.pdf'
 resume_skills = extract_resume_info(resume_path)
 
 skills_df = pd.read_csv('/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/skills.csv')
