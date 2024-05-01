@@ -65,35 +65,36 @@ class InterviewChatbot:
 
         total_score = sum(criteria.values())
         print(total_score)
-    
+        
+ 
     def interview(self, user_message, resume_content, jd_content):
         if not self.interview_started:
             if user_message.lower() == 'hello':
-                # Ask the default question if the conversation hasn't started yet
                 default_question = "Let's start the interview. Please tell me about your experience."
-                self.conversation_history.append(default_question)
+                self.conversation_history.append(("bot", default_question))
                 self.interview_started = True
                 return default_question
             else:
-                # Return a message prompting the user to start the interview
                 return "Type 'hello' to start the interview."
         
         else:
-            if self.question_count >= 4:  # Stop the interview after 5 questions
-                #self.interview_scoring(self.conversation_history)
-                return "Thank you for participating in the interview. It has been completed."        
+            self.conversation_history.append(("human", user_message))
             
-            # Generate a question using OpenAI
-            prompt = f"Generate an interview question based on the conversation history along with given resume personalising the questions required based on the given job description. Do not repeat any questions or ask similar questions. Ask only one question at a time to assess the candidate as best as possible. Return only the final question generated and no extra text. Conversation history : {self.conversation_history} \n Job description : {jd_content} \n Resume : {resume_content}"
+            if self.question_count >= 4:
+                return "Thank you for participating in the interview. It has been completed."        
+        
+            prompt = f"You are an interviewer tasked with assessing a candidate. Based on the conversation history provided along with the resume and job description given below, ask the candidate a question. Ensure it's unique. Based on the coversation history, make sure the question is not of the same topic as covered before. Only one question should be asked at a time. Resume : {resume_content}\n Job Description : {jd_content}\n Chat History : {self.conversation_history}"
             
             messages = [
-                ("system", " Answer the following question with the given information."),
+                ("system", " Act as an interviewer and complete the task given. Do not ask questions on the same topics or repeat similar questions as covered in coversation history. Return only the final generated interview question and nothing else."),
                 ("human", prompt)]
             
             question = self.llm.invoke(messages) 
+            self.conversation_history.append(("bot", question.content))
             
-            self.conversation_history.append(user_message)
-            self.question_count += 1  # Increment the question count
+            print(self.conversation_history)
+            
+            self.question_count += 1
             return question.content
         
 
