@@ -49,8 +49,7 @@ def extract_resume_info(resume_path):
     print(df)
     
     skills = extracted_info.get('Skills', '')
-    print(skills)
-    return skills
+    return response, skills
 
 
 def skills_matching(resume_skills, skills_df):
@@ -65,25 +64,51 @@ def skills_matching(resume_skills, skills_df):
     secondary_similarity_scores = []
     
     # Calculate similarity scores for primary skills
-    prompt1 = f"Find the intersection between set 1 : {', '.join(resume_skills_list)} and set 2 : {primary_skills}. Give me a percentage as (intersection/number of items in set 2)*100. Print only the final percentage"
+    prompt1 = f"Find the intersection between set 1 : {', '.join(resume_skills_list)} and set 2 : {primary_skills}. Give me a percentage as (intersection/number of items in set 2)*100. Output only one final percentage and nothing extra. If you do not know, output 0."
     docs_primary_skills = []
     for skill in primary_skills:
         docs_primary_skills.append(Document(page_content=skill))
-    primary_similarity_scores = chain.run(input_documents=docs_primary_skills, question=prompt1, model='gpt-3.5-turbo')
+    primary_similarity_scores = chain.run(input_documents=docs_primary_skills, question=prompt1, model='gpt-3.5-turbo', temperature=0.7, max_tokens=3)
     print("Primary Skills Match :" , primary_similarity_scores)
     
 
     # Calculate similarity scores for secondary skills
-    prompt = f"Find the intersection between set 1 : {', '.join(resume_skills_list)} and set 2 : {secondary_skills}. Give me a percentage as (intersection/number of items in set 2)*100. Print only the final percentage"
+    prompt = f"Find the intersection between set 1 : {', '.join(resume_skills_list)} and set 2 : {primary_skills}. Give me a percentage as (intersection/number of items in set 2)*100. Output only one final percentage and nothing extra. If you do not know, output 0."
     docs_secondary_skills = []
     for skill in secondary_skills:
         docs_secondary_skills.append(Document(page_content=skill))
-    secondary_similarity_scores = chain.run(input_documents=docs_secondary_skills, question=prompt, model='gpt-3.5-turbo')
+    secondary_similarity_scores = chain.run(input_documents=docs_secondary_skills, question=prompt, model='gpt-3.5-turbo', temperature=0.7, max_tokens=3)
     print("Secondary Skills Match :" , secondary_similarity_scores)
+    
+def jobDescription_matching(resume_response, job_description_path):
+    llm = OpenAI()
+    chain = load_qa_chain(llm, chain_type="stuff",verbose=True)
+    
+    text = " "
+    docs_jobDescription = []
+    pdf_reader = PdfReader(job_description_path)
+    for page in pdf_reader.pages:
+        text += page.extract_text() 
+    docs_jobDescription.append(Document(page_content=text))
+    
+    
+    prompt = f"Give the job fit as a percentage for above job description and the given resume : {resume_response}.  Output only the percentage and omit any extra words. "
+    jobDescription_matching_score = chain.run(input_documents=docs_jobDescription, question=prompt, model='gpt-3.5-turbo', temperature=0.7, max_tokens=3)
+    print("Job Description Matching Score :" , jobDescription_matching_score)
+    
+    # pattern = r'\b(\d{1,3})%\b'
+    # match = re.search(pattern, jobDescription_matching_score)
+    # if match:
+    #     percentage = match.group(1)
+    #     print("Job Description Matching Final Score :" , percentage)
 
 
 resume_path = '/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/sample/Reethu_Resume.pdf'
-resume_skills = extract_resume_info(resume_path)
+response, resume_skills = extract_resume_info(resume_path)
+
 
 skills_df = pd.read_csv('/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/skills.csv')
 skills_matching(resume_skills, skills_df)
+
+job_description_path = '/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/Job_Description.pdf'
+jobDescription_matching(response, job_description_path)
