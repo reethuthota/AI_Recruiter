@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template
 import os
+from langchain_openai import ChatOpenAI
 from langchain.llms import OpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.schema.document import Document
@@ -13,66 +14,36 @@ app = Flask(__name__)
 
 class InterviewChatbot:
     def __init__(self):
-        self.llm = OpenAI()
+        self.llm = ChatOpenAI(temperature=0.2)
         self.conversation_history = []
         self.interview_started = False
         self.question_count = 0 
     
     def extract_resume_info(self, resume_path, jd_path):
-        text = " "
-        docs = []
+        resumeText = " "
         pdf_reader = PdfReader(resume_path)
         for page in pdf_reader.pages:
-            text += page.extract_text() 
-            docs.append(Document(page_content=text))
+            resumeText += page.extract_text() 
         
-        prompt_template = """
-            Extract the following information from the resume:
-            
-            Name: {}
-            Email: {}
-            Contact Info: {}
-            Education: {}
-            Skills: {}
-            Experience: {}
-            Designation: {}
-        """
         
-        chain = load_qa_chain(self.llm, chain_type="stuff", verbose=True)
-        response = chain.run(input_documents=docs, question=prompt_template)
+        prompt = f"Extract the following information from the resume given below: Name, Email, Contact Info,  Website links, Education, Skills, Experience, Projects, Additional Info. Resume : {resumeText}"
         
-        parts = response.split('\n')
+        messages = [
+        ("system", " Answer the following question with the given information. If you do not know the answer, say null"),
+        ("human", prompt)]
         
-        extracted_info = {}
-        for part in parts:
-            part = part.strip()
-            if part:
-                key_value = part.split(':')
-                if len(key_value) == 2:
-                    key = key_value[0].strip() 
-                    value = key_value[1].strip()  
-                    extracted_info[key] = value
-    
-        self.conversation_history.append(response)
-        df = pd.DataFrame([extracted_info])
+        resumeResponse = self.llm.invoke(messages)
+        print(resumeResponse.content)
         
-        # cover_letter_content = " "
-        # pdf_reader = PdfReader(cover_letter_path)
-        # for page in pdf_reader.pages:
-        #     cover_letter_content += page.extract_text() 
-        #     docs.append(Document(page_content=cover_letter_content))
-    
-        # df["Cover Letter"] = cover_letter_content
+        parts = resumeResponse.content.split('\n')
         
+
         jd_content = " "
         pdf_reader = PdfReader(jd_path)
         for page in pdf_reader.pages:
             jd_content += page.extract_text() 
-            docs.append(Document(page_content=jd_content))
-        
-        df["Job Description"] = jd_content
-        
-        return docs
+      
+        return resumeResponse.content, jd_content
     
     def interview_scoring(self, conversation_history) :
         criteria = {
@@ -95,46 +66,43 @@ class InterviewChatbot:
         total_score = sum(criteria.values())
         print(total_score)
     
-    def interview(self, user_message, docs):
+    def interview(self, user_message, resume_content, jd_content):
         if not self.interview_started:
             if user_message.lower() == 'hello':
                 # Ask the default question if the conversation hasn't started yet
                 default_question = "Let's start the interview. Please tell me about your experience."
                 self.conversation_history.append(default_question)
                 self.interview_started = True
-                # return {'question': default_question, 'bot_response': ''}
                 return default_question
             else:
                 # Return a message prompting the user to start the interview
-                # return {'question': '', 'bot_response': "Type 'hello' to start the interview."}
                 return "Type 'hello' to start the interview."
         
         else:
             if self.question_count >= 4:  # Stop the interview after 5 questions
-                self.interview_scoring(self.conversation_history)
-                return "Thank you for participating in the interview. It has been completed."
-            
-            # Combine resume and cover letter into a single document
-            combined_document_content = '\n'.join(self.conversation_history)
-            for doc in docs:
-                combined_document_content += '\n' + doc.page_content
-            combined_document = Document(page_content=combined_document_content)
+                #self.interview_scoring(self.conversation_history)
+                return "Thank you for participating in the interview. It has been completed."        
             
             # Generate a question using OpenAI
-            question_generation_prompt = "Generate an interview question based on the conversation history along with given resume personalising the questions required based on the given job description. Do not repeat any questions or ask similar questions and cover a variety of domains, projects and skills mentioned in the resume. Ask only one question at a time and ask questions to assess the candidate as best as possible. \n\n"
-            chain = load_qa_chain(self.llm, chain_type="stuff", verbose=True)
-            question = chain.run(input_documents=[combined_document], question=question_generation_prompt)
+            prompt = f"Generate an interview question based on the conversation history along with given resume personalising the questions required based on the given job description. Do not repeat any questions or ask similar questions. Ask only one question at a time to assess the candidate as best as possible. Return only the final question generated and no extra text. Conversation history : {self.conversation_history} \n Job description : {jd_content} \n Resume : {resume_content}"
+            
+            messages = [
+                ("system", " Answer the following question with the given information."),
+                ("human", prompt)]
+            
+            question = self.llm.invoke(messages) 
             
             self.conversation_history.append(user_message)
             self.question_count += 1  # Increment the question count
-            return question
+            return question.content
         
 
 chatbot = InterviewChatbot()
+
 resume_path = '/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/sample/Reethu_Resume.pdf' 
 jd_path = '/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/Job_description.pdf'
 
-docs = chatbot.extract_resume_info(resume_path, jd_path)
+resume_content, jd_content = chatbot.extract_resume_info(resume_path, jd_path)
 
 @app.route('/')
 def index():
@@ -143,7 +111,7 @@ def index():
 @app.route('/chat', methods=['POST'])
 def chat():
     user_message = request.form['user_message']
-    bot_response = chatbot.interview(user_message, docs)
+    bot_response = chatbot.interview(user_message, resume_content, jd_content)
     return {'bot_response': bot_response}
 
 if __name__ == '__main__':
