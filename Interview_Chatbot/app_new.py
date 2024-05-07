@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect, url_for
 import os
 from langchain_openai import ChatOpenAI
 from langchain_community.callbacks import get_openai_callback
@@ -83,7 +83,6 @@ class InterviewChatbot:
                 
                 #print(self.conversation_history)
                 
-                
                 self.question_count += 1
                 return question.content
         
@@ -95,7 +94,23 @@ jd_path = '/Users/reethu/coding/Projects/AI_Recruiter/ResumeScoring/Job_descript
 
 resume_content, jd_content = chatbot.extract_resume_info(resume_path, jd_path)
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    error = None
+    print('here')
+    if request.method == 'POST':
+        print('here2')
+        username = request.form['username']
+        password = request.form['password']
+        code = request.form['code']
+        if username == 'reethu' and password == 'hello' and code == 'xyz':
+            return redirect(url_for('chatbot'))
+        else:
+            error = 'Invalid credentials. Please try again.'
+    # Render the login template
+    return render_template('login.html', error=error)
+
+@app.route('/chatbot', methods=['GET'])
 def index():
     return render_template('index.html')
 
