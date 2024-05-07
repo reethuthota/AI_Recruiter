@@ -104,13 +104,13 @@ def login():
         password = request.form['password']
         code = request.form['code']
         if username == 'reethu' and password == 'hello' and code == 'xyz':
-            return redirect(url_for('chatbot'))
+            return redirect(url_for('index'))
         else:
             error = 'Invalid credentials. Please try again.'
     # Render the login template
     return render_template('login.html', error=error)
 
-@app.route('/chatbot', methods=['GET'])
+@app.route('/index', methods=['GET'])
 def index():
     return render_template('index.html')
 
