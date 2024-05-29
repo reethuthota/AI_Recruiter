@@ -40,7 +40,6 @@ def recruiter_required(f):
     def decorated_function(*args, **kwargs):
         if 'role' not in session or session['role'] != 'recruiter':
             flash("You do not have permission to access this page.", "error")
-            #return redirect(url_for('home'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -49,12 +48,12 @@ def applicant_required(f):
     def decorated_function(*args, **kwargs):
         if 'role' not in session or session['role'] != 'applicant':
             flash("You do not have permission to access this page.", "error")
-            #return redirect(url_for('home'))
         return f(*args, **kwargs)
     return decorated_function
 
 @app.route('/')
 def home():
+    session.clear()
     return render_template('home.html')
 
 @app.route('/authenticate', methods=['POST'])
@@ -69,6 +68,7 @@ def authenticate():
 
 @app.route('/login/<role>', methods=['GET', 'POST'])
 def login(role):
+    next_url = request.args.get('next')
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -80,14 +80,17 @@ def login(role):
         if user and check_password_hash(user['password'], password):
             session['user'] = email
             session['role'] = role
+            if next_url:
+                return redirect(next_url)
             if role == 'recruiter':
                 return redirect(url_for('recruiter_dashboard'))
             elif role == 'applicant':
                 return redirect(url_for('applicant_dashboard'))
         else:
             error = "Invalid email or password. Please try again."
-            return render_template('login.html', role=role, error=error)
-    return render_template('login.html', role=role)
+            return render_template('login.html', role=role, error=error, next=next_url)
+    return render_template('login.html', role=role, next=next_url)
+
 
 @app.route('/signup/<role>', methods=['GET', 'POST'])
 def signup(role):
@@ -382,10 +385,123 @@ def close_applications(job_id):
     flash("Applications for this job have been closed", "success")
     return redirect(url_for('view_applications', job_id=job_id)) 
 
+@app.route('/interview_login')
+@login_required
+@applicant_required
+def interview_login():
+    if 'user' not in session:
+        return redirect(url_for('login', role='applicant', next=url_for('interview_login')))
+    if request.method == 'POST':
+        code = request.form.get('code')
+        job = jobs.find_one({'code': code})
+        if job:
+            collection_name = job['job_collection_name']
+            job_id = job['_id']
+            user_collection = db[collection_name]
+            user_details = user_collection.find_one({'email': session['user']})
+            resume = user_details['resume_content']
+            job_description = job['job_description']
+            return redirect(url_for('interview', job_id = job_id))
+        else:
+            flash("Invalid job code.", "error")
+            return redirect(url_for('applicant_dashboard'))
+    return render_template('interview_login.html')
+
+@app.route('/interview/<job_id>', methods=['GET', 'POST'])
+@login_required
+@applicant_required  
+def interview(job_id):
+    resume = request.args.get('resume')
+    job_description = request.args.get('job_description')
+    job = jobs.find_one({'_id': ObjectId(job_id)})
+    
+    if request.method == 'POST':
+        user_message = request.form['user_message']
+        bot_response = interview_questions(user_message, resume, job_description)
+        
+        print(user_message)
+        print(bot_response)
+        
+        if bot_response.startswith("Thank you"):
+            interview_score = interview_scoring()
+            collection_name = job['job_collection_name']
+            user_collection = db[collection_name]
+            user_details = user_collection.find_one({'email': session['user']})
+            user_collection.update_one({'email': session['user']}, {'$set': {'interview_score': interview_score}})
+            session.clear()
+            pass
+        
+        return {'bot_response': bot_response}
+    
+    return render_template('interview.html')
+         
+def interview_questions(user_message, resume_content, jd_content):
+    if 'conversation_history' not in session or 'question_count' not in session:
+        session['conversation_history'] = []
+        session['question_count'] = 0
+    
+    conversation_history = session['conversation_history']
+    question_count = session['question_count']
+    print(session['conversation_history'])
+    print(session['question_count'], question_count)
+    
+    llm = ChatOpenAI(temperature=0.2)
+    
+    if not conversation_history:
+        if user_message.lower() == 'hello':
+            default_question = "Let's start the interview. Please tell me about your experience."
+            conversation_history.append(("bot", default_question))
+            session['conversation_history'] = conversation_history
+            return default_question
+        else:
+            return "Type 'hello' to start the interview."
+    else:
+        conversation_history.append(("human", user_message))
+        session['conversation_history'] = conversation_history
+
+        if question_count >= 4:
+            return "Thank you for participating in the interview. You will receive further communication soon."
+
+        prompt = f"You are an interviewer tasked with assessing a candidate. Based on the conversation history provided along with the resume and job description given below, ask the candidate a question. Ensure it's unique. Based on the conversation history, make sure the question is not of the same topic as covered before. Only one question should be asked at a time. Resume : {resume_content}\n Job Description : {jd_content}\n Chat History : {conversation_history}"
+        
+        messages = [
+            ("system", " Act as an interviewer and complete the task given. Do not ask questions on the same topics or repeat similar questions as covered in conversation history. Return only the final generated interview question and nothing else."),
+            ("human", prompt)
+        ]
+        
+        with get_openai_callback() as cb:
+            question = llm.invoke(messages)
+            if not question:
+                return "An error occurred while generating the question. Please try again."
+        
+        conversation_history.append(("bot", question.content))
+        session['conversation_history'] = conversation_history
+        session['question_count'] = question_count + 1
+        session.modified = True
+        
+        return question.content
+
+def interview_scoring() :
+    llm = ChatOpenAI(temperature=0.2)
+    conversation_history = session['conversation_history']
+    with get_openai_callback() as cb:
+        
+        prompt = f"You are an interviewer tasked with assessing a candidate. Based on the conversation history provided, assess the candidate's responses on the basis of communication, relevant experience and problem solving skills. Score every answer out of 10. Return (score/number of questions)*100 \n Chat History : {conversation_history}"
+            
+        messages = [
+                ("system", "Answer the following question with a percentage as an answer. Do not give any further explanations. Output the percentage without the % sign. If you do not know the answer, say 0"),
+                ("human", prompt)]
+    
+        interview_score = llm.invoke(messages)
+        print("Interview Score :" , interview_score.content)
+    print(cb)
+    return interview_score.content
+
 @app.route('/logout', methods=['POST'])
 def logout():
     session.pop('user', None)
     session.pop('role', None)
+    session.clear()
     return redirect(url_for('home'))
 
 if __name__ == '__main__':
