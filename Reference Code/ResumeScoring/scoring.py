@@ -19,26 +19,48 @@ def extract_resume_info(resume_path):
         prompt = f"Extract the following information from the resume given below: Name, Email, Contact Info,  Website links, Education, Skills, Experience, Projects, Additional Info. Resume : {resumeText}"
         
         messages = [
-            ("system", " Answer the following question with the given information. If you do not know the answer, say null"),
+            ("system", " Answer the following question with the given information. Use a \n only after every section. If you do not know the answer, say null"),
             ("human", prompt)]
         
         resumeResponse = llm.invoke(messages)
         print(cb)
-    print(resumeResponse.content)
+    #print(resumeResponse.content)
     
     parts = resumeResponse.content.split('\n')
+    print(parts)
     
-    extracted_info = {}
-    for part in parts:
-        part = part.strip()
-        if part:
-            key_value = part.split(':')
-            if len(key_value) == 2:
-                key = key_value[0].strip() 
-                value = key_value[1].strip()  
-                extracted_info[key] = value
+    if 'Skills:' in parts:
+        start_index = parts.index('Skills:')
+        if 'Experience:' in parts:
+            stop_index = parts.index('Experience:')
+            sublist = parts[start_index:stop_index]
+        else:
+            sublist = parts[start_index:]
+        print("SUBLIST:", sublist)
+        
+        skills = ', '.join(sublist)
+    else:
+        # If "Skills:" not found, search for a substring containing "Skills"
+        sublist = [element for element in parts if 'Skills' in element]
+        if sublist:
+            skills = ', '.join(sublist)
+        else:
+            skills = ''
+    print(skills)
     
-    skills = extracted_info.get('Skills', '')
+    # extracted_info = {}
+    # for part in parts:
+    #     part = part.strip()
+    #     if part:
+    #         key_value = part.split(':')
+    #         if len(key_value) == 2:
+    #             key = key_value[0].strip() 
+    #             value = key_value[1].strip()  
+    #             extracted_info[key] = value
+                
+    # print(extracted_info)
+    
+    # skills = extracted_info.get('Skills', '')
     return resumeResponse.content, skills
 
 
