@@ -53,6 +53,9 @@
                             {% if applications[0].total_score is defined %}
                                 <th>Total Score</th>
                             {% endif %}
+                            {% if applications[0].interview_score is defined %}
+                                <th>Interview Score</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -75,6 +78,9 @@
                                 {% endif %}
                                 {% if application.total_score is defined %}
                                     <td>{{ application.total_score }}</td>
+                                {% endif %}
+                                {% if application.interview_score is defined %}
+                                    <td>{{ application.interview_score }}</td>
                                 {% endif %}
                             </tr>
                         {% endfor %}

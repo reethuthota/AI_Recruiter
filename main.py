@@ -1,5 +1,6 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+import matplotlib.pyplot as plt
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -293,7 +294,7 @@ def jobDescription_matching(resume, job_description):
     llm = ChatOpenAI(temperature=0.2)
     prompt = f"Give the job fit as a percentage for the job description : {job_description} and the given resume : {resume}."
     messages = [
-    ("system", "Answer the following question with a percentage as an answer. Do not give any further explanations. Output the percentage without the % sign. If you do not know the answer, say 0"),
+    ("system", "Answer the following question with a percentage as an answer. Do not give any further explanations. Output the percentage without the % sign. If you do not know the answer, say 40"),
     ("human", prompt)]
     jobDescription_matching_score = llm.invoke(messages)
     print("Job Description Matching Score :" , jobDescription_matching_score.content)
@@ -385,7 +386,7 @@ def close_applications(job_id):
     flash("Applications for this job have been closed", "success")
     return redirect(url_for('view_applications', job_id=job_id)) 
 
-@app.route('/interview_login')
+@app.route('/interview_login', methods=['GET', 'POST'])
 @login_required
 @applicant_required
 def interview_login():
@@ -426,14 +427,13 @@ def interview(job_id):
             interview_score = interview_scoring()
             collection_name = job['job_collection_name']
             user_collection = db[collection_name]
-            user_details = user_collection.find_one({'email': session['user']})
             user_collection.update_one({'email': session['user']}, {'$set': {'interview_score': interview_score}})
             session.clear()
             pass
         
         return {'bot_response': bot_response}
     
-    return render_template('interview.html')
+    return render_template('interview.html', job_id = job_id)
          
 def interview_questions(user_message, resume_content, jd_content):
     if 'conversation_history' not in session or 'question_count' not in session:
