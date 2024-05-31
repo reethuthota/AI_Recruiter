@@ -356,7 +356,7 @@ def send_emails_to_top_candidates(job_id):
 
 def send_email(email, subject, body):
     SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
-    flow = InstalledAppFlow.from_client_secrets_file('/Users/reethu/coding/Projects/AI_Recruiter/Backend/credentials.json', SCOPES)
+    flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
     creds = flow.run_local_server(port=0)
     service = build('gmail', 'v1', credentials=creds)
 
