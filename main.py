@@ -1,6 +1,8 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-import matplotlib.pyplot as plt
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+import matplotlib.pyplot as plt 
+import matplotlib
+matplotlib.use('Agg')
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -14,6 +16,7 @@ from email.mime.text import MIMEText
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from requests import HTTPError
+import io
 
 from secret_key import openapi_key, MONGO_URI
 os.environ['OPENAI_API_KEY'] = openapi_key
@@ -385,6 +388,40 @@ def close_applications(job_id):
     jobs.update_one({'_id': ObjectId(job_id)}, {'$set': {'status': 'closed'}})
     flash("Applications for this job have been closed", "success")
     return redirect(url_for('view_applications', job_id=job_id)) 
+
+@app.route('/view_graph/<job_id>', methods=['POST'])
+@login_required
+@recruiter_required
+def view_graph(job_id):
+    job = jobs.find_one({'_id': ObjectId(job_id)})
+    applications = db[job['job_collection_name']].find()
+
+    names = []
+    scores = []
+
+    for application in applications:
+        names.append(application['name'])
+        scores.append(application['total_score'])
+
+    # Create figure and axis objects with non-interactive backend
+    fig, ax = plt.subplots(figsize=(8, len(names) * 0.5))
+    ax.barh(names, scores, color='green')
+    ax.set_xlabel('Total Score')
+    ax.set_ylabel('Candidate Names')
+    ax.set_title('Candidate Scores')
+
+    # Automatically adjust subplot parameters to give padding
+    plt.tight_layout()
+
+    # Save to BytesIO object
+    img = io.BytesIO()
+    fig.savefig(img, format='png', bbox_inches='tight')
+    img.seek(0)
+    
+    # Clear the current figure
+    plt.close(fig)
+
+    return send_file(img, mimetype='image/png')
 
 @app.route('/interview_login', methods=['GET', 'POST'])
 @login_required
