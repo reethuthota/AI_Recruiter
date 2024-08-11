@@ -10,6 +10,14 @@
             <button type="submit" class="logout-button">Logout</button>
         </form>
     </div>
+
+    <div class="search-bar-container">
+        <form action="{{ url_for('applicant_dashboard') }}" method="post" class="search-form">
+            <input type="text" name="search_query" id="searchInput" placeholder="Search by company name">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
     <div class="flash-messages">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -21,7 +29,8 @@
             {% endif %}
         {% endwith %}
     </div>
-    <h1>Available Jobs</h1>
+    <h1>APPLICANT DASHBOARD</h1>
+    <h2>Available Jobs</h2>
     <button class='view-applications-button' onclick="location.href='{{ url_for('view_my_applications') }}'">View My Applications</button>
     <div class="job-cards">
         {% for job in jobs %}
@@ -47,5 +56,30 @@
         </div>
         {% endfor %}
     </div>
+
+    <footer>
+        <ul class="footer-links">
+            <li><a href="https://www.broadrange.ai/" target="_blank">About</a></li>
+            <li><a href="https://www.broadrange.ai/" target="_blank">Contact</a></li>
+            <li><a href="https://www.broadrange.ai/" target="_blank">Privacy Policy</a></li>
+            <li><a href="https://www.broadrange.ai/" target="_blank">Terms of Service</a></li>
+        </ul>
+    </footer>
+    
+    <script>
+        function filterJobs() {
+            var input = document.getElementById('searchInput').value.toLowerCase();
+            var jobCards = document.getElementsByClassName('job-card');
+
+            for (var i = 0; i < jobCards.length; i++) {
+                var companyName = jobCards[i].getAttribute('data-company').toLowerCase();
+                if (companyName.includes(input)) {
+                    jobCards[i].style.display = "";
+                } else {
+                    jobCards[i].style.display = "none";
+                }
+            }
+        }
+    </script>
 </body>
 </html>

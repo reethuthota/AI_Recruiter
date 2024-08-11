@@ -6,7 +6,7 @@ body {
     align-items: center;
     margin: 0;
     padding: 20px;
-    height: 100vh;
+    min-height: 100vh;
 }  
 
 h1 {
@@ -15,7 +15,18 @@ h1 {
 
 .header {
     position: absolute;
-    left: 30px;
+    top: 20px;
+    right: 30px;
+    display: flex;
+    align-items: center;
+}
+
+.profile-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-left: 10px;
 }
 
 .job-cards {
@@ -131,4 +142,59 @@ button:hover {
     background-color: #f8d7da;
     color: #721c24;
     border: 1px solid #f5c6cb;
+}
+
+footer {
+    margin-top: auto;
+    width: 100%;
+    background-color: #f8f9fa;
+    padding: 20px 0;
+    text-align: center;
+    box-shadow: 0 -1px 10px rgba(0, 0, 0, 0.1);
+}
+
+.footer-links {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.footer-links li {
+    display: inline;
+}
+
+.footer-links a {
+    text-decoration: none;
+    color: #155724;
+    transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+    color: #155724;
+}
+
+.search-bar-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.search-form {
+    display: flex;
+    align-items: center;
+}
+
+.search-form input[type="text"] {
+    padding: 5px;
+    font-size: 14px;
+}
+
+.search-form button {
+    padding: 5px 10px;
+    margin-left: 5px;
+    font-size: 14px;
+    cursor: pointer;
 }

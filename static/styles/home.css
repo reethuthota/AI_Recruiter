@@ -11,6 +11,24 @@ body {
     justify-content: space-around;
 }
 
+.header-container {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #bcb024;
+    position: relative; /* To position the title in the center */
+}
+
+.header-title {
+    font-size: 24px;
+    font-weight: bold;
+    position: absolute; /* Position the title absolutely */
+    left: 50%;
+    transform: translateX(-50%); /* Center the title horizontally */
+    color: #098931;
+}
+
 .recruiter-login,
 .applicant-login {
     width: 50%;
@@ -70,4 +88,36 @@ p {
     background: -webkit-linear-gradient(right, #32C766, #068932);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+footer {
+    margin-top: auto;
+    width: 100%;
+    background-color: #f8f9fa;
+    padding: 20px 0;
+    text-align: center;
+    box-shadow: 0 -1px 10px rgba(0, 0, 0, 0.1);
+}
+
+.footer-links {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.footer-links li {
+    display: inline;
+}
+
+.footer-links a {
+    text-decoration: none;
+    color: #068932;
+    transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+    color: #068932;
 }

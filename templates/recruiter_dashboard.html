@@ -25,15 +25,16 @@
         {% endwith %}
     </div>
     
-    <h1>Your Jobs</h1>
+    <h1>RECRUITER DASHBOARD</h1>
+    <h2>Your Jobs</h2>
     
     <div class="create-job">
         <a href="{{ url_for('recruiter_dashboard_create') }}" class="create-job-button">Create New Job</a>
     </div>
     
-    <div class="job-cards">
+    <div class="job-cards" id="jobCards">
         {% for job in jobs %}
-        <div class="job-card">
+        <div class="job-card" data-company="{{ job.company_name }}">
             <div class="job-details">
                 <h2>{{ job.company_name }}</h2>
                 <h3>{{ job.position }}</h3>
@@ -43,9 +44,20 @@
                 <form action="{{ url_for('view_applications', job_id=job._id) }}" method="post">
                     <button type="submit" class="view-applications-button">View Applications</button>
                 </form>
+                <form action="{{ url_for('view_graph', job_id=job._id) }}" method="post" target="_blank">
+                    <button type="submit" class="view-graph-button">View Metrics</button>
+                </form>
             </div>
         </div>
         {% endfor %}
     </div>
+    <footer>
+        <ul class="footer-links">
+            <li><a href="https://www.broadrange.ai/" target="_blank">About</a></li>
+            <li><a href="https://www.broadrange.ai/" target="_blank">Contact</a></li>
+            <li><a href="https://www.broadrange.ai/" target="_blank">Privacy Policy</a></li>
+            <li><a href="https://www.broadrange.ai/" target="_blank">Terms of Service</a></li>
+        </ul>
+    </footer>
 </body>
 </html>
