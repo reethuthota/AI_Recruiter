@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, send_file
 import matplotlib.pyplot as plt 
 import matplotlib
 matplotlib.use('Agg')
@@ -147,7 +147,7 @@ def recruiter_dashboard_create():
         for page in pdf_reader.pages:
             jobDescription += page.extract_text() 
         
-        collection_name = f"{company_name}_{position}_{datetime.now().strftime('%Y%m%d')}"
+        collection_name = f"{company_name}{position}{datetime.now().strftime('%Y%m%d')}"
         # Check if the collection already exists
         if collection_name in db.list_collection_names():
             flash("Job already exists", "error")
@@ -402,6 +402,15 @@ def view_graph(job_id):
     for application in applications:
         names.append(application['name'])
         scores.append(application['total_score'])
+
+    # Check if there are no applications
+    if not names:
+        return render_template_string('''
+            <script>
+                alert('No applications found for this job. Unable to generate graph.');
+                window.history.back();  // Go back to the previous page
+            </script>
+        ''')
 
     # Create figure and axis objects with non-interactive backend
     fig, ax = plt.subplots(figsize=(8, len(names) * 0.5))
