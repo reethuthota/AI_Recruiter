@@ -11,13 +11,6 @@
         </form>
     </div>
 
-    <div class="search-bar-container">
-        <form action="{{ url_for('applicant_dashboard') }}" method="post" class="search-form">
-            <input type="text" name="search_query" id="searchInput" placeholder="Search by company name">
-            <button type="submit">Search</button>
-        </form>
-    </div>
-
     <div class="flash-messages">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -31,6 +24,14 @@
     </div>
     <h1>APPLICANT DASHBOARD</h1>
     <h2>Available Jobs</h2>
+
+    <div class="search-bar-container">
+        <form action="{{ url_for('applicant_dashboard') }}" method="post" class="search-form">
+            <input type="text" name="search_query" id="searchInput" placeholder="Search by company name">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+    
     <button class='view-applications-button' onclick="location.href='{{ url_for('view_my_applications') }}'">View My Applications</button>
     <div class="job-cards">
         {% for job in jobs %}
